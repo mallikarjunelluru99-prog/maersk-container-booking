@@ -32,6 +32,9 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	testCompileOnly("org.projectlombok:lombok")
 	testAnnotationProcessor("org.projectlombok:lombok")
+	testImplementation("org.mockito:mockito-core:5.12.0")
+	testImplementation("io.projectreactor:reactor-test")
+
 }
 
 tasks.withType<Test> {
