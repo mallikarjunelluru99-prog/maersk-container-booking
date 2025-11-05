@@ -6,6 +6,7 @@ import com.maersk.container.booking.model.BookingRequest;
 import com.maersk.container.booking.model.BookingResponse;
 import com.maersk.container.booking.service.AvailabilityService;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -19,7 +20,7 @@ public class BookingControllerV1 {
     }
 
     @PostMapping("/check-availability")
-    public Mono<AvailabilityResponse> checkAvailability(@RequestBody AvailabilityRequest request) {
+    public Mono<AvailabilityResponse> checkAvailability(@Valid @RequestBody AvailabilityRequest request) {
         return availabilityService.checkAvailability(request);
     }
 

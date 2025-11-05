@@ -4,10 +4,17 @@ package com.maersk.container.booking.service;
 import com.maersk.container.booking.client.ContainerAvailabilityClient;
 import com.maersk.container.booking.model.AvailabilityRequest;
 import com.maersk.container.booking.model.AvailabilityResponse;
+import com.maersk.container.booking.model.ExternalAvailabilityResponse;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -20,36 +27,65 @@ class AvailabilityServiceTest {
     @BeforeEach
     void setUp() {
         availabilityClient = mock(ContainerAvailabilityClient.class);
-        availabilityService = new AvailabilityService(availabilityClient);
+
+        CircuitBreaker cb = CircuitBreaker.of("availabilityProvider",
+                CircuitBreakerConfig.custom()
+                        .slidingWindowSize(10)
+                        .failureRateThreshold(50f)
+                        .waitDurationInOpenState(Duration.ofSeconds(1))
+                        .build());
+
+        Retry retry = Retry.of("availabilityProvider",
+                RetryConfig.custom()
+                        .maxAttempts(3)
+                        .waitDuration(Duration.ofMillis(10))
+                        .retryExceptions(RuntimeException.class)
+                        .build());
+
+        availabilityService = new AvailabilityService(availabilityClient, cb, retry, true, false);
     }
 
     @Test
-    void shouldReturnAvailableTrueWhenQuantityWithinLimit() {
-        AvailabilityRequest request = new AvailabilityRequest();
-        request.setQuantity(10);
+    void mapsPositiveSpaceToTrue() {
+        when(availabilityClient.invokeAvailabilityApi(any()))
+                .thenReturn(Mono.just(ext(5)));
 
-        when(availabilityClient.checkAvailability(any()))
-                .thenReturn(Mono.just(new AvailabilityResponse(true)));
-
-        StepVerifier.create(availabilityService.checkAvailability(request))
-                .expectNextMatches(AvailabilityResponse::isAvailable)
+        StepVerifier.create(availabilityService.checkAvailability(req()))
+                .expectNextMatches(AvailabilityResponse::available)
                 .verifyComplete();
-
-        verify(availabilityClient, times(1)).checkAvailability(any());
     }
 
     @Test
-    void shouldReturnAvailableFalseWhenQuantityExceedsLimit() {
-        AvailabilityRequest request = new AvailabilityRequest();
-        request.setQuantity(150);
+    void mapsZeroSpaceToFalse() {
+        when(availabilityClient.invokeAvailabilityApi(any()))
+                .thenReturn(Mono.just(ext(0)));
 
-        when(availabilityClient.checkAvailability(any()))
-                .thenReturn(Mono.just(new AvailabilityResponse(false)));
-
-        StepVerifier.create(availabilityService.checkAvailability(request))
-                .expectNextMatches(resp -> !resp.isAvailable())
+        StepVerifier.create(availabilityService.checkAvailability(req()))
+                .expectNextMatches(res -> !res.available())
                 .verifyComplete();
+    }
 
-        verify(availabilityClient, times(1)).checkAvailability(any());
+
+    @Test
+    void fallbackWhenAlwaysFailing_flagOn_returnsFalse() {
+        when(availabilityClient.invokeAvailabilityApi(any()))
+                .thenReturn(Mono.error(new RuntimeException("boom")));
+
+        StepVerifier.create(availabilityService.checkAvailability(req()))
+                .expectNextMatches(res -> !res.available()) // fallbackAvailable=false
+                .verifyComplete();
+    }
+
+    private AvailabilityRequest req() {
+        var r = new AvailabilityRequest();
+        r.setContainerSize(20);
+        r.setOrigin("Chennai");
+        r.setDestination("Singapore");
+        r.setQuantity(5);
+        return r;
+    }
+
+    private ExternalAvailabilityResponse ext(int space) {
+        return new ExternalAvailabilityResponse(space);
     }
 }

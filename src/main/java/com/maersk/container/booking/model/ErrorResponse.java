@@ -1,11 +1,8 @@
 package com.maersk.container.booking.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import java.util.List;
 
-@Data
-@AllArgsConstructor
-public class ErrorResponse {
-    private String message;
-    private String code;
+public record ErrorResponse(String message, String code, List<FieldError> details) {
+    public record FieldError(String field, String error) {}
 }
+
