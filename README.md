@@ -11,6 +11,7 @@ This service provides APIs to:
 ## 🧩 Features
 
 - Reactive & non-blocking architecture using **Spring WebFlux (Netty)**
+- **JWT authentication** with **role-based access control (RBAC)**
 - **Java 21** with modern language features
 - **Gradle Kotlin DSL** build
 - Extensible, modular design aligned with clean architecture principles

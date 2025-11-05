@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Maersk Container Booking API
+  version: 1.0.0
+  description: Spring Boot WebFlux service for container booking and availability management.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Development
+  - url: https://api.maersk.com/container-booking/api/v1
+    description: Production (example)
+
+tags:
+  - name: Authentication
+    description: JWT token generation
+  - name: Bookings
+    description: Container booking and availability operations
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Common Models
+    AvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required: [containerType, containerSize, origin, destination, quantity]
+      properties:
+        containerType:
+          type: string
+          enum: [DRY, REEFER]
+        containerSize:
+          type: integer
+          enum: [20, 40]
+        origin:
+          type: string
+          minLength: 3
+          maxLength: 64
+        destination:
+          type: string
+          minLength: 3
+          maxLength: 64
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100
+
+    AvailabilityResponse:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: boolean
+          description: Indicates if containers are available.
+      example:
+        available: true
+
+    BookingRequest:
+      allOf:
+        - $ref: '#/components/schemas/AvailabilityRequest'
+        - type: object
+          required: [timestamp]
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+              example: "2020-10-12T13:53:09Z"
+
+    BookingResponse:
+      type: object
+      required: [bookingRef, apiVersion]
+      properties:
+        bookingRef:
+          type: string
+          example: "957000001"
+          description: Monotonic booking reference number.
+        apiVersion:
+          type: string
+          example: "v1"
+
+    AuthTokenResponse:
+      type: object
+      required: [token, tokenType]
+      properties:
+        token:
+          type: string
+          description: JWT access token.
+        tokenType:
+          type: string
+          example: Bearer
+          description: Token type to use in Authorization header.
+
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: "Invalid request payload"
+        code:
+          type: string
+          example: "BOOKING-400"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              error: { type: string }
+
+paths:
+
+  /auth/token:
+    post:
+      tags: [Authentication]
+      summary: Generate JWT token
+      description: >
+        Issues a JWT access token for authenticated users.
+        The returned token must be used in the `Authorization: Bearer <token>` header
+        when accessing secured endpoints like `/bookings`.
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+          example: alice
+      responses:
+        '200':
+          description: JWT token generated successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+              example:
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                tokenType: "Bearer"
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /bookings/check-availability:
+    post:
+      tags: [Bookings]
+      summary: Check container availability
+      description: >
+        Public endpoint to check container availability between ports.
+        Does not require authentication.
+      security: []  # explicitly public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AvailabilityRequest' }
+            example:
+              containerType: DRY
+              containerSize: 20
+              origin: Southampton
+              destination: Singapore
+              quantity: 5
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityResponse' }
+              examples:
+                available:
+                  value: { available: true }
+                unavailable:
+                  value: { available: false }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: External service unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /bookings:
+    post:
+      tags: [Bookings]
+      summary: Create a container booking
+      description: >
+        Creates a new booking if containers are available.
+        Requires a valid JWT Bearer token with `CUSTOMER` role.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookingRequest' }
+            example:
+              containerType: DRY
+              containerSize: 20
+              origin: Southampton
+              destination: Singapore
+              quantity: 5
+              timestamp: "2020-10-12T13:53:09Z"
+      responses:
+        '200':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingResponse' }
+              example:
+                bookingRef: "957000001"
+                apiVersion: "v1"
+        '401':
+          description: Unauthorized (missing or invalid JWT)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                message: "Missing or invalid Bearer token"
+        '403':
+          description: Forbidden (authenticated but lacks required role)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                message: "User does not have role CUSTOMER"
+        '409':
+          description: Conflict (capacity full)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                message: "No available capacity for requested route"
+        '503':
+          description: External booking service unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
