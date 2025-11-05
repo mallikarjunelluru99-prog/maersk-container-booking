@@ -6,3 +6,8 @@ jwt:
   secret: ReplaceThisWithA256BitSecretKeyReplaceThisWithA256BitSecretKey
   expiration-ms: 3600000  # 1 hour
 
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+

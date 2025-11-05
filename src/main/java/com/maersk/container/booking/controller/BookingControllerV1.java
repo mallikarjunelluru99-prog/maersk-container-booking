@@ -4,6 +4,7 @@ import com.maersk.container.booking.model.AvailabilityRequest;
 import com.maersk.container.booking.model.AvailabilityResponse;
 import com.maersk.container.booking.model.BookingRequest;
 import com.maersk.container.booking.model.BookingResponse;
+import com.maersk.container.booking.service.AvailabilityService;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -11,10 +12,15 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/v1/bookings")
 public class BookingControllerV1 {
 
+    private final AvailabilityService availabilityService;
+
+    public BookingControllerV1(AvailabilityService availabilityService) {
+        this.availabilityService = availabilityService;
+    }
+
     @PostMapping("/check-availability")
     public Mono<AvailabilityResponse> checkAvailability(@RequestBody AvailabilityRequest request) {
-        // TODO: Replace with external API integration
-        return Mono.just(new AvailabilityResponse(true));
+        return availabilityService.checkAvailability(request);
     }
 
     @PostMapping
