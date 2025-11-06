@@ -3,6 +3,7 @@ package com.maersk.container.booking.controller;
 import com.maersk.container.booking.model.AvailabilityRequest;
 import com.maersk.container.booking.model.AvailabilityResponse;
 import com.maersk.container.booking.service.AvailabilityService;
+import com.maersk.container.booking.service.BookingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -13,8 +14,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
@@ -34,6 +33,10 @@ class BookingControllerV1Test {
     @Autowired
     private AvailabilityService availabilityService;
 
+    @Autowired
+    private BookingService bookingService;
+
+
 
     @TestConfiguration
     static class TestSecurityConfig {
@@ -51,6 +54,11 @@ class BookingControllerV1Test {
         @Bean
         public AvailabilityService availabilityService() {
             return Mockito.mock(AvailabilityService.class);
+        }
+
+        @Bean
+        public BookingService bookingService() {
+            return Mockito.mock(BookingService.class);
         }
 
     }
@@ -89,7 +97,7 @@ class BookingControllerV1Test {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("""
                     {"containerType":"DRY","containerSize":20,"origin":"Chennai",
-                    "destination":"Singapore","quantity":150}
+                    "destination":"Singapore","quantity":100}
                     """)
                 .exchange()
                 .expectStatus().isOk()
@@ -111,7 +119,7 @@ class BookingControllerV1Test {
                       "containerSize": 40,
                       "origin": "Chennai",
                       "destination": "Singapore",
-                      "quantity": 150
+                      "quantity": 100
                     }
                     """)
                 .exchange()

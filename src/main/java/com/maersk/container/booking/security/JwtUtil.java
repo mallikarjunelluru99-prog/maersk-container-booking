@@ -28,7 +28,8 @@ public class JwtUtil {
                 .claim("roles", roles)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
-                .signWith(getSigningKey())
+                .signWith(getSigningKey())        // <- remove the second argument
                 .compact();
     }
+
 }

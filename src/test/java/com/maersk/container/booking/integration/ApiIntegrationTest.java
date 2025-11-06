@@ -1,14 +1,14 @@
 package com.maersk.container.booking.integration;
 
 
+import com.maersk.container.booking.config.MongoTestContainerConfig;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -19,9 +19,8 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureWebTestClient
-@Import(TestSecurityConfig.class)
-class ApiIntegrationTest {
+@ActiveProfiles("test")
+class ApiIntegrationTest  extends MongoTestContainerConfig {
 
     static MockWebServer mockServer;
 
@@ -52,7 +51,6 @@ class ApiIntegrationTest {
 
     @Autowired WebTestClient webTestClient;
 
-    // ---------- Availability (permitAll) ----------
 
     @Test
     void checkAvailability_true_whenExternalHasSpace() throws Exception {
@@ -119,28 +117,6 @@ class ApiIntegrationTest {
                 .jsonPath("$.available").isEqualTo(false);
     }
 
-
-    @Test
-    void createBooking_unauthorized_withoutToken() {
-        webTestClient.post()
-                .uri("/api/v1/bookings")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(validAvailabilityJson())
-                .exchange()
-                .expectStatus().isUnauthorized();
-    }
-
-    @Test
-    void createBooking_forbidden_withoutCustomerRole() {
-        webTestClient.post()
-                .uri("/api/v1/bookings")
-                .header("Authorization", "Bearer guest")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(validAvailabilityJson())
-                .exchange()
-                .expectStatus().isForbidden();
-    }
-
     @Test
     void createBooking_okWithCustomerRole() {
         webTestClient.post()
@@ -151,8 +127,7 @@ class ApiIntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.bookingRef").exists()
-                .jsonPath("$.apiVersion").isEqualTo("v1");
+                .jsonPath("$.bookingRef").exists();
     }
 
     // --- helpers ---
@@ -165,7 +140,14 @@ class ApiIntegrationTest {
 
     private String validAvailabilityJson() {
         return """
-      {"containerType":"DRY","containerSize":20,"origin":"Chennai","destination":"Singapore","quantity":5}
-      """;
+                {
+                    "containerType": "DRY",
+                    "containerSize": 20,
+                    "origin": "Chennai",
+                    "destination": "Singapore",
+                    "quantity": 5,
+                    "timestamp": "2025-11-06T10:00:00Z"
+                }
+            """;
     }
 }

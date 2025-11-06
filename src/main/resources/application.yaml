@@ -1,9 +1,13 @@
 spring:
+  data:
+    mongodb:
+      uri: mongodb://root:rootpass@localhost:27017/?authSource=admin
+      database: container_booking_db
   application:
     name: maersk-container-booking
 
 jwt:
-  secret: ReplaceThisWithA256BitSecretKeyReplaceThisWithA256BitSecretKey
+  secret: "0123456789ABCDEF0123456789ABCDEF"
   expiration-ms: 3600000  # 1 hour
 
 
@@ -24,13 +28,13 @@ availability:
 resilience4j:
   custom-circuitbreaker:
     availability-provider:
-      sliding-window-type: COUNT_BASED   # or TIME_BASED
-      sliding-window-size: 5          # if TIME_BASED: seconds in the rolling window
+      sliding-window-type: COUNT_BASED
+      sliding-window-size: 5
       minimum-number-of-calls: 5
 
-      failure-rate-threshold: 10         # percent
-      slow-call-rate-threshold: 50       # percent
-      slow-call-duration-threshold: 2s   # anything over this is “slow”
+      failure-rate-threshold: 10
+      slow-call-rate-threshold: 50
+      slow-call-duration-threshold: 2s
 
       wait-duration-in-open-state: 10s
       permitted-number-of-calls-in-half-open-state: 3
@@ -38,8 +42,6 @@ resilience4j:
 
       writable-stack-trace-enabled: true
       event-consumer-buffer-size: 200
-
-      # Optional: customize which exceptions count as failures
       record-exceptions:
         - org.springframework.web.reactive.function.client.WebClientRequestException
         - io.netty.handler.codec.http.TooLongHttpHeaderException
@@ -60,7 +62,6 @@ resilience4j:
         - org.springframework.web.reactive.function.client.WebClientResponseException$InternalServerError
       ignore-exceptions:
         - org.springframework.web.reactive.function.client.WebClientResponseException$NotFound
-
 
 
 logging:

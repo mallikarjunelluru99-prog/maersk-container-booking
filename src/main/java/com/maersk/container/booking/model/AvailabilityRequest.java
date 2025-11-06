@@ -2,9 +2,15 @@ package com.maersk.container.booking.model;
 
 import com.maersk.container.booking.validation.OneOfInt;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Data
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 public class AvailabilityRequest {
     @NotNull(message = "Container size is required")
     @OneOfInt(value = {20, 40}, message = "Container size must be either 20 or 40")

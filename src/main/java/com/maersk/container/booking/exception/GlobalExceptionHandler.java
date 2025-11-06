@@ -38,7 +38,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ServerWebInputException.class)
-    public ResponseEntity<ErrorResponse> handleInput(ServerWebInputException ex) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Mono<ErrorResponse> handleInput(ServerWebInputException ex) {
         List<ErrorResponse.FieldError> details = new ArrayList<>();
 
         InvalidFormatException ife = findCause(ex, InvalidFormatException.class);
@@ -63,8 +64,20 @@ public class GlobalExceptionHandler {
             details.add(new ErrorResponse.FieldError(field, reason));
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("Invalid request payload", "VALIDATION_ERROR", details));
+        return Mono.just(new ErrorResponse("Invalid request payload", "VALIDATION_ERROR", details));
+    }
+
+    @ExceptionHandler(BookingException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Mono<Map<String, String>> handleInternalError() {
+        return Mono.just(Map.of("message", "Sorry there was a problem processing your request"));
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Mono<Map<String, String>> handleIException(Exception ex) {
+        log.error("exception occurred while processing the request", ex);
+        return Mono.just(Map.of("message", "Sorry there was a problem processing your request"));
     }
 
     private static <T extends Throwable> T findCause(Throwable t, Class<T> type) {
