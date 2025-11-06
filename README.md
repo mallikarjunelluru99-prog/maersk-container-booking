@@ -41,5 +41,11 @@ Make sure you have **Java 21** and **Gradle 8.5+** installed.
 git clone https://github.com/mallikarjunelluru99-prog/maersk-container-booking.git
 cd maersk-container-booking
 
+# start mongo container
+cd docker
+docker compose up -d
+docker ps
+
+cd ..
 # Run the application
 ./gradlew bootRun
