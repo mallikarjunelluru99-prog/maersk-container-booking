@@ -144,7 +144,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
-  /bookings/check-availability:
+  /bookings/availability:
     post:
       tags: [Bookings]
       summary: Check container availability

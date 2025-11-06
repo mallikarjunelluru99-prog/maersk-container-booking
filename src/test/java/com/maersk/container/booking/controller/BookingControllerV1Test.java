@@ -1,72 +1,39 @@
 package com.maersk.container.booking.controller;
 
-import com.maersk.container.booking.model.AvailabilityRequest;
-import com.maersk.container.booking.model.AvailabilityResponse;
+import com.maersk.container.booking.exception.GlobalExceptionHandler;
+import com.maersk.container.booking.model.*;
 import com.maersk.container.booking.service.AvailabilityService;
 import com.maersk.container.booking.service.BookingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
-
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@WebFluxTest(controllers = BookingControllerV1.class)
-@Import(BookingControllerV1Test.MockConfig.class)
+@ExtendWith(MockitoExtension.class)
 class BookingControllerV1Test {
 
-    @Autowired
-    private WebTestClient webTestClient;
+    @Mock AvailabilityService availabilityService;
+    @Mock BookingService bookingService;
 
-    @Autowired
-    private AvailabilityService availabilityService;
+    @InjectMocks BookingControllerV1 controller;
 
-    @Autowired
-    private BookingService bookingService;
-
-
-
-    @TestConfiguration
-    static class TestSecurityConfig {
-        @Bean
-        SecurityWebFilterChain testSecurity(ServerHttpSecurity http) {
-            return http
-                    .csrf(ServerHttpSecurity.CsrfSpec::disable)   // important for POST
-                    .authorizeExchange(ex -> ex.anyExchange().permitAll())
-                    .build();
-        }
-    }
-
-    @TestConfiguration
-    static class MockConfig {
-        @Bean
-        public AvailabilityService availabilityService() {
-            return Mockito.mock(AvailabilityService.class);
-        }
-
-        @Bean
-        public BookingService bookingService() {
-            return Mockito.mock(BookingService.class);
-        }
-
-    }
+    WebTestClient webTestClient;
 
     @BeforeEach
-    void setup() {
-        Mockito.reset(availabilityService);
+    void setUp() {
+        webTestClient = WebTestClient.bindToController(controller)
+                .controllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
+
 
     @Test
     void shouldReturnTrueWhenAvailable() {
@@ -74,13 +41,12 @@ class BookingControllerV1Test {
                 .thenReturn(Mono.just(new AvailabilityResponse(true)));
 
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
-                .header("Authorization", "Bearer whatever")
+                .uri("/api/v1/bookings/availability")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("""
-                    {"containerType":"DRY","containerSize":20,"origin":"Chennai",
-                    "destination":"Singapore","quantity":10}
-                    """)
+                  {"containerType":"DRY","containerSize":20,"origin":"Chennai",
+                   "destination":"Singapore","quantity":10}
+                """)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -88,45 +54,54 @@ class BookingControllerV1Test {
     }
 
     @Test
-    void shouldReturnFalseWhenUnavailable() {
-        when(availabilityService.checkAvailability(any(AvailabilityRequest.class)))
-                .thenReturn(Mono.just(new AvailabilityResponse(false)));
-
+    void availability_shouldReturn400_onValidationErrors() {
+        // invalid enum, invalid size, short origin/destination, bad quantity, etc.
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
+                .uri("/api/v1/bookings/availability")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("""
-                    {"containerType":"DRY","containerSize":20,"origin":"Chennai",
-                    "destination":"Singapore","quantity":100}
-                    """)
+                  {"containerType":"DRYX","containerSize":22,"origin":"A",
+                   "destination":"","quantity":0}
+                """)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("VALIDATION_ERROR")
+                .jsonPath("$.details").isArray();
+    }
+
+
+    @Test
+    void createBooking_returnsBookingRef_onSuccess() {
+        when(bookingService.createBooking(any(BookingRequest.class)))
+                .thenReturn(Mono.just(new BookingResponse("957000123")));
+
+        webTestClient.post()
+                .uri("/api/v1/bookings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                  {"containerType":"DRY","containerSize":20,"origin":"Chennai",
+                   "destination":"Singapore","quantity":5,"timestamp":"2025-11-06T10:00:00Z"}
+                """)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.available").isEqualTo(false);
+                .jsonPath("$.bookingRef").isEqualTo("957000123");
     }
 
     @Test
-    void shouldReturnAvailableFalseWhenQuantityExceedsLimit() {
-        when(availabilityService.checkAvailability(any(AvailabilityRequest.class)))
-                .thenReturn(Mono.just(new AvailabilityResponse(false)));
-
+    void createBooking_returns400_onValidationErrors() {
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
+                .uri("/api/v1/bookings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("""
-                    {
-                      "containerType": "DRY",
-                      "containerSize": 40,
-                      "origin": "Chennai",
-                      "destination": "Singapore",
-                      "quantity": 100
-                    }
-                    """)
+                  {"containerType":"REEFERR","containerSize":25,"origin":"Ch",
+                   "destination":"","quantity":500,"timestamp":"bad"}
+                """)
                 .exchange()
-                .expectStatus().isOk()
+                .expectStatus().isBadRequest()
                 .expectBody()
-                .jsonPath("$.available").isEqualTo(false);
-
-        verify(availabilityService).checkAvailability(any(AvailabilityRequest.class));
+                .jsonPath("$.code").isEqualTo("VALIDATION_ERROR")
+                .jsonPath("$.details").isArray();
     }
 }

@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/api/v1/auth/**").permitAll()
-                        .pathMatchers("/api/v1/bookings/check-availability").permitAll()
+                        .pathMatchers("/api/v1/bookings/availability").permitAll()
                         .pathMatchers("/api/v1/bookings/**").hasRole("CUSTOMER")
                         .anyExchange().authenticated()
                 )
@@ -46,9 +46,6 @@ public class SecurityConfig {
                 .build();
     }
 
-    /**
-     * ✅ Active in test/local profiles — disables JWT completely
-     */
     @Bean
     @Profile({"test", "local"})
     public SecurityWebFilterChain relaxedFilterChain(ServerHttpSecurity http) {

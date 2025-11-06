@@ -1,0 +1,160 @@
+{
+	"info": {
+		"_postman_id": "3e91f8ba-4ebe-42c9-808f-c7443018b44b",
+		"name": "container-bookings Copy",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49841538",
+		"_collection_link": "https://mallikarjun-elluru99-5341828.postman.co/workspace/9aa8df77-15b2-4fe0-8f76-ac1438b45f7f/collection/49841538-3e91f8ba-4ebe-42c9-808f-c7443018b44b?action=share&source=collection_link&creator=49841538"
+	},
+	"item": [
+		{
+			"name": "check-availability",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "default",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"containerType\": \"DRY\",\n  \"containerSize\": 20,\n  \"origin\": \"Southampton\",\n  \"destination\": \"Singapore\",\n  \"quantity\": 100\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/bookings/availability",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"bookings",
+						"availability"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create-booking",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"containerType\": \"DRY\",\n  \"containerSize\": 40,\n  \"origin\": \"Southampton\",\n  \"destination\": \"Singapore\",\n  \"quantity\": 100,\n  \"timestamp\" : \"2020-10-12T13:53:09Z\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/bookings",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"bookings"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Token",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Extract the token from response JSON",
+							"let response = pm.response.json();",
+							"pm.environment.set(\"token\", response.token);",
+							"",
+							"// Optional: log to console for debug",
+							"console.log(\"Token set to:\", response.token);",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/auth/token?username=Arjun",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"token"
+					],
+					"query": [
+						{
+							"key": "username",
+							"value": "Arjun"
+						}
+					]
+				},
+				"description": "This request retrieves a list of users from the JSONPlaceholder API."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "token",
+			"value": "",
+			"type": "default"
+		}
+	]
+}

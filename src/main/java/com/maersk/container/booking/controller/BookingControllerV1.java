@@ -22,7 +22,7 @@ public class BookingControllerV1 {
         this.bookingService = bookingService;
     }
 
-    @PostMapping("/check-availability")
+    @PostMapping("/availability")
     public Mono<AvailabilityResponse> checkAvailability(@Valid @RequestBody AvailabilityRequest request) {
         return availabilityService.checkAvailability(request);
     }

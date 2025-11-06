@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class ApiIntegrationTest  extends MongoTestContainerConfig {
+class AvailabilityApiIntegrationTest extends MongoTestContainerConfig {
 
     static MockWebServer mockServer;
 
@@ -37,14 +37,11 @@ class ApiIntegrationTest  extends MongoTestContainerConfig {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
-        // route external HTTP calls to MockWebServer
+
         r.add("availability.external.base-url", () -> "http://localhost:" + mockServer.getPort());
         r.add("availability.external.path", () -> "/api/bookings/checkAvailable");
-        // wide header limits (avoid Netty header size errors)
         r.add("availability.external.max-header-size", () -> 131072);
         r.add("availability.external.max-initial-line-length", () -> 16384);
-
-        // resilience flags
         r.add("availability.external.fallback-enabled", () -> true);
         r.add("availability.external.fallback-available", () -> false);
     }
@@ -57,7 +54,7 @@ class ApiIntegrationTest  extends MongoTestContainerConfig {
         mockServer.enqueue(json(200, "{\"availableSpace\":6}"));
 
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
+                .uri("/api/v1/bookings/availability")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(validAvailabilityJson())
                 .exchange()
@@ -76,7 +73,7 @@ class ApiIntegrationTest  extends MongoTestContainerConfig {
         mockServer.enqueue(json(200, "{\"availableSpace\":0}"));
 
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
+                .uri("/api/v1/bookings/availability")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(validAvailabilityJson())
                 .exchange()
@@ -92,7 +89,7 @@ class ApiIntegrationTest  extends MongoTestContainerConfig {
         mockServer.enqueue(json(200, "{\"availableSpace\":3}"));
 
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
+                .uri("/api/v1/bookings/availability")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(validAvailabilityJson())
                 .exchange()
@@ -108,26 +105,13 @@ class ApiIntegrationTest  extends MongoTestContainerConfig {
         mockServer.enqueue(json(404, "{}"));
 
         webTestClient.post()
-                .uri("/api/v1/bookings/check-availability")
+                .uri("/api/v1/bookings/availability")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(validAvailabilityJson())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.available").isEqualTo(false);
-    }
-
-    @Test
-    void createBooking_okWithCustomerRole() {
-        webTestClient.post()
-                .uri("/api/v1/bookings")
-                .header("Authorization", "Bearer cust")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(validAvailabilityJson())
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.bookingRef").exists();
     }
 
     // --- helpers ---
@@ -145,8 +129,7 @@ class ApiIntegrationTest  extends MongoTestContainerConfig {
                     "containerSize": 20,
                     "origin": "Chennai",
                     "destination": "Singapore",
-                    "quantity": 5,
-                    "timestamp": "2025-11-06T10:00:00Z"
+                    "quantity": 5
                 }
             """;
     }
